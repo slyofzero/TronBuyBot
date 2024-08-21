@@ -115,7 +115,7 @@ export async function sendAlert(data: BuyData) {
       const emojis = emoji.repeat(emojiCount);
       const trendingPosition =
         trendingRank !== -1
-          ? `[HypeTrending \\#${trendingRank + 1}](${TRENDING_CHANNEL_LINK})`
+          ? `[Tron Trending \\#${trendingRank + 1}](${TRENDING_CHANNEL_LINK})`
           : "";
 
       const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*
@@ -164,7 +164,7 @@ ${trendingPosition}`;
           });
         }
       } catch (error) {
-        errorHandler(error);
+        // errorHandler(error);
         botRemovedError(error, group.chatId);
       }
     }

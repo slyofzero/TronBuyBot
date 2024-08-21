@@ -1,134 +1,174 @@
-import { TokenData, TokenMetrics, TxnData } from "@/types";
-import { apiFetcher } from "@/utils/api";
+import { errorHandler } from "@/utils/handlers";
+import { memoTokenData } from "@/vars/tokens";
+import { TRENDING_CHANNEL_LINK } from "@/utils/env";
+import { trendingTokens } from "@/vars/trending";
 import {
+  botRemovedError,
   cleanUpBotMessage,
-  generateBuyEmojis,
   hardCleanUpBotMessage,
 } from "@/utils/bot";
-import {
-  defaultEmoji,
-  EXPLORER_URL,
-  minBuy,
-  TOKEN_API,
-} from "@/utils/constants";
-import { BOT_USERNAME, DEXTOOLS_API_KEY } from "@/utils/env";
-import {
-  formatFloat,
-  formatToInternational,
-  shortenAddress,
-} from "@/utils/general";
+import { buyLimit } from "@/utils/constants";
+import { trendingMessageId } from "@/vars/message";
 import { projectGroups } from "@/vars/projectGroups";
 import { teleBot } from "..";
-import { errorHandler } from "@/utils/handlers";
 
-export async function sendAlert(txnData: TxnData) {
-  const { token } = txnData;
-  const groups = projectGroups.filter(
-    ({ token: storedToken }) => storedToken === token
-  );
+export interface BuyData {
+  txnHash: string;
+  fromTokenSymbol: string;
+  fromTokenAmount: number;
+  toTokenSymbol: string;
+  toTokenAmount: number;
+  buyer: string;
+  token: string;
+}
 
-  if (!groups.length) return false;
+// export interface BuyData {
+//   txn: string;
+//   contract: string;
+//   buyer: string;
+//   amountBought: number;
+// }
 
-  const [dexSData, dexTData] = await Promise.all([
-    apiFetcher<TokenData>(`${TOKEN_API}/${token}`),
-    apiFetcher<TokenMetrics>(
-      `https://public-api.dextools.io/standard/v2/token/aptos/${token}/info`,
-      { "X-API-KEY": DEXTOOLS_API_KEY || "" }
-    ),
-  ]);
-
-  const priceData = dexSData.data;
-  const firstPair = priceData?.pairs.at(0);
-  const tokenInfo = dexTData.data?.data;
-
-  if (!firstPair || !tokenInfo) return;
-
-  const { fdv, mcap } = tokenInfo;
-  const { priceUsd } = firstPair;
-  const {
-    receiver,
-    version,
-    tokenSent,
-    tokenReceived,
-    amountReceived,
-    amountSent,
-  } = txnData;
-
-  const buyUsd = parseFloat((amountReceived * Number(priceUsd)).toFixed(2));
-  const cleanedName = cleanUpBotMessage(tokenReceived);
-  const emojiCount = generateBuyEmojis(buyUsd);
-  const shortendReceiver = cleanUpBotMessage(shortenAddress(receiver));
-  const dexToolsLink = `https://www.dextools.io/app/en/aptos/pair-explorer/${token}`;
-  // const cmcLink = "https://coinmarketcap.com/currencies/uptos/";
-  const dexscreenLink = `https://dexscreener.com/aptos/${token}`;
-
-  for (const group of groups) {
-    const groupMinBuy = group.minBuy || minBuy;
-    if (buyUsd < groupMinBuy) continue;
-
+export async function sendAlert(data: BuyData) {
+  try {
     const {
-      emoji,
-      chatId,
-      mediaType,
-      media,
-      telegramLink,
-      twitterLink,
-      websiteLink,
-    } = group;
-    const emojis = `${emoji || defaultEmoji}`.repeat(emojiCount);
-    const socials = [
-      ["Website", websiteLink],
-      ["Twitter", twitterLink],
-      ["Telegram", telegramLink],
-    ]
-      .filter(([, link]) => link)
-      .map(([social, link]) => `[${social}](${link})`)
-      .join(" \\| ");
+      buyer,
+      token,
+      fromTokenAmount,
+      fromTokenSymbol,
+      toTokenAmount,
+      toTokenSymbol,
+      txnHash,
+    } = data;
 
-    const socialsText = socials ? `🫧 *Socials* \\- ${socials}\n` : "";
+    const groups = projectGroups.filter(
+      ({ token: groupToken }) => groupToken === token
+    );
 
-    const text = `[${cleanedName} Buy\\!](https://t.me/${BOT_USERNAME})
+    if (!groups.length) return;
 
+    // Preparing message for token
+    const tokenData = memoTokenData[token];
+    const { priceUsd, fdv, info } = tokenData;
+    const sentUsdNumber = toTokenAmount * Number(priceUsd);
+    if (sentUsdNumber < buyLimit) return;
+    const sentNative = cleanUpBotMessage(fromTokenAmount.toLocaleString("en")); // prettier-ignore
+    const sentUsd = cleanUpBotMessage(sentUsdNumber.toFixed(2));
+    const formattedAmount = cleanUpBotMessage(
+      toTokenAmount.toLocaleString("en")
+    );
+    // const position = change ? `+${change}%` : "New!!!";
+    const trendingRank = Object.entries(trendingTokens).findIndex(
+      ([trendingToken]) => trendingToken === token
+    );
+
+    // log(`${buyer} bought ${toTokenAmount} ${toTokenSymbol}`);
+
+    const randomizeEmojiCount = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+
+    let emojiCount = 0;
+    if (sentUsdNumber <= 50) {
+      emojiCount = randomizeEmojiCount(5, 10);
+    } else if (sentUsdNumber <= 100) {
+      emojiCount = randomizeEmojiCount(10, 35);
+    } else {
+      emojiCount = randomizeEmojiCount(35, 70);
+    }
+
+    // links
+    const buyerLink = `https://tronscan.org/#/address/${buyer}`;
+    const txnLink = `https://tronscan.org/#/transaction/${txnHash}`;
+    const dexSLink = `https://dexscreener.com/tron/${token}`;
+    // const photonLink = `https://photon-sol.tinyastro.io/en/lp/${token}`;
+    // const advertisement = advertisements.at(0);
+    // let advertisementText = "";
+
+    // if (advertisement) {
+    //   const { text, link } = advertisement;
+    //   advertisementText = `*_Ad: [${text}](${link})_*`;
+    // } else {
+    //   advertisementText = `*_Ad: [Place your advertisement here](https://t.me/${TRENDING_BOT_USERNAME}?start=adBuyRequest)_*`;
+    // }
+
+    const telegramLink = info?.socials?.find(
+      ({ type }) => type.toLowerCase() === "telegram"
+    )?.url;
+
+    const specialLink = telegramLink
+      ? `[Telegram](${telegramLink})`
+      : `[Screener](${dexSLink})`;
+
+    //     const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*
+    // ${emojis}
+
+    // 🔀 ${sentNative} ${fromTokenSymbol} *\\($${sentUsd}\\)*
+    // 🔀 ${formattedAmount} *${hardCleanUpBotMessage(toTokenSymbol)}*
+    // 👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
+    // 💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(fdv.toLocaleString("en"))}
+
+    // [DexS](${dexSLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
+
+    // ${advertisementText}`;
+
+    const addEmojiToMessage = (emoji: string) => {
+      const emojis = emoji.repeat(emojiCount);
+      const trendingPosition =
+        trendingRank !== -1
+          ? `[HypeTrending \\#${trendingRank}](${TRENDING_CHANNEL_LINK})`
+          : "";
+
+      const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*
 ${emojis}
-  
-🔀 *Spent*: ${formatFloat(amountSent)} ${hardCleanUpBotMessage(
-      tokenSent
-    )} \\($${cleanUpBotMessage(buyUsd)}\\)
-🔀 *Got*: ${formatFloat(amountReceived)} ${hardCleanUpBotMessage(tokenReceived)}
-👤 *Buyer*: [${shortendReceiver}](${EXPLORER_URL}/account/${receiver}) \\| [*${version}*](${EXPLORER_URL}/transaction/${version})
-⬆️ *FDV* \\~ $${cleanUpBotMessage(formatToInternational(fdv))}
-🔘 *Marketcap* \\~  $${cleanUpBotMessage(formatToInternational(mcap))}
-${socialsText}
-[⚙️ DexTools](${dexToolsLink}) \\| [🦅 DexScreener](${dexscreenLink})
-`;
 
-    // --------------------- Sending message ---------------------
-    try {
-      if (media) {
-        if (mediaType === "video") {
-          await teleBot.api.sendVideo(chatId, media, {
-            caption: text,
-            parse_mode: "MarkdownV2",
-            // @ts-expect-error weird
-            disable_web_page_preview: true,
-          });
+🔀 ${sentNative} ${fromTokenSymbol} *\\($${sentUsd}\\)*
+🔀 ${formattedAmount} *${hardCleanUpBotMessage(toTokenSymbol)}*
+👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
+💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(fdv.toLocaleString("en"))}
+
+[DexS](${dexSLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
+
+${trendingPosition}`;
+
+      return message;
+    };
+
+    // Sending Message
+    for (const group of groups) {
+      const { emoji, mediaType, minBuy } = group;
+      if (sentUsd > Number(minBuy)) continue;
+      const message = addEmojiToMessage(emoji || "🟢");
+
+      try {
+        if (group.media) {
+          if (mediaType === "video") {
+            await teleBot.api.sendAnimation(group.chatId, group.media, {
+              parse_mode: "MarkdownV2",
+              // @ts-expect-error Type not found
+              disable_web_page_preview: true,
+              caption: message,
+            });
+          } else {
+            await teleBot.api.sendPhoto(group.chatId, group.media, {
+              parse_mode: "MarkdownV2",
+              // @ts-expect-error Type not found
+              disable_web_page_preview: true,
+              caption: message,
+            });
+          }
         } else {
-          await teleBot.api.sendPhoto(chatId, media, {
-            caption: text,
+          await teleBot.api.sendMessage(group.chatId, message, {
             parse_mode: "MarkdownV2",
-            // @ts-expect-error weird
+            // @ts-expect-error Type not found
             disable_web_page_preview: true,
           });
         }
-      } else {
-        await teleBot.api.sendMessage(chatId, text, {
-          parse_mode: "MarkdownV2",
-          // @ts-expect-error weird
-          disable_web_page_preview: true,
-        });
+      } catch (error) {
+        errorHandler(error);
+        botRemovedError(error, group.chatId);
       }
-    } catch (error) {
-      errorHandler(error);
     }
+  } catch (error) {
+    errorHandler(error);
   }
 }

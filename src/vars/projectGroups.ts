@@ -3,6 +3,7 @@ import { StoredGroup } from "@/types";
 import { log } from "@/utils/handlers";
 
 export let projectGroups: StoredGroup[] = [];
+export const tokensToWatch: string[] = [];
 
 export function addProjectGroup(group: StoredGroup) {
   projectGroups.push(group);
@@ -18,4 +19,8 @@ export async function syncProjectGroups() {
   });
   projectGroups = rows;
   log("Synced projectGroups with firebase");
+
+  for (const { token } of rows) {
+    if (!tokensToWatch.includes(token)) tokensToWatch.push(token);
+  }
 }

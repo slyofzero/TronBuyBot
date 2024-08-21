@@ -1,7 +1,7 @@
 import { addDocument, updateDocumentById } from "@/firebase";
 import { teleBot } from "@/index";
-import { StoredGroup } from "@/types";
-import { getTokenMetadata } from "@/utils/web3";
+import { PairsData, StoredGroup } from "@/types";
+import { apiFetcher } from "@/utils/api";
 import { projectGroups, syncProjectGroups } from "@/vars/projectGroups";
 import { botSetupState, settingsState, userState } from "@/vars/state";
 import { CallbackQueryContext, CommandContext, Context } from "grammy";
@@ -36,14 +36,18 @@ export async function setTokenAddress(ctx: CommandContext<Context>) {
 
   if (!projectGroup) return ctx.reply("Please restart the command again.");
 
-  const tokenMetadata = await getTokenMetadata(tokenAddress || "");
-  if (!tokenAddress || !tokenMetadata) {
+  const dexSData = await apiFetcher<PairsData>(
+    `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
+  );
+
+  const firstPair = dexSData?.data?.pairs?.at(0);
+  if (!firstPair || !tokenAddress) {
     return ctx.reply("Please enter a valid Aptos token address");
   }
 
   delete userState[chatId];
 
-  const { symbol } = tokenMetadata;
+  const { symbol } = firstPair.baseToken;
 
   const projectGroupData = projectGroups.find(
     ({ chatId }) => chatId === projectGroup

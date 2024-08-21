@@ -98,3 +98,8 @@ export function shortenAddress(address: string) {
     address.length
   )}`;
 }
+
+export function getRandomItemFromArray<T>(arr: T[]) {
+  const randomIndex = Math.floor(Math.random() * arr.length);
+  return arr[randomIndex];
+}

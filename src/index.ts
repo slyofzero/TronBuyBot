@@ -1,48 +1,46 @@
 import { Bot } from "grammy";
 import { initiateBotCommands, initiateCallbackQueries } from "./bot";
-import { errorHandler, log } from "./utils/handlers";
+import { log } from "./utils/handlers";
 import { BOT_TOKEN } from "./utils/env";
-import { aptos, processTxn, rpcConfig } from "./aptosWeb3";
-import { syncProjectGroups } from "./vars/projectGroups";
-import { sleep } from "./utils/time";
-import { PaginationArgs } from "@aptos-labs/ts-sdk";
-import { AptosTransaction } from "./types";
+import {
+  projectGroups,
+  syncProjectGroups,
+  tokensToWatch,
+} from "./vars/projectGroups";
+import { memoizeTokenData } from "./vars/tokens";
+import { syncAdvertisements } from "./vars/advertisements";
+import { syncTrendingTokens } from "./vars/trending";
+import { syncTrendingMessageId } from "./vars/message";
+import { getTokenBuys } from "./utils/buy";
 
 export const teleBot = new Bot(BOT_TOKEN || "");
 log("Bot instance ready");
 
 (async function () {
-  rpcConfig();
   teleBot.start();
   log("Telegram bot setup");
   initiateBotCommands();
   initiateCallbackQueries();
 
-  await Promise.all([syncProjectGroups()]);
+  await Promise.all([
+    syncAdvertisements(),
+    syncProjectGroups(),
+    syncTrendingTokens(),
+    syncTrendingMessageId(),
+  ]);
 
-  let offset = 0;
-  const limit = 50;
+  await memoizeTokenData(tokensToWatch);
 
-  const toRepeat = async () => {
-    try {
-      let options: PaginationArgs = { limit };
-      if (offset > 0) options = { offset, ...options };
-      const txns = await aptos.getTransactions({ options });
+  getTokenBuys();
 
-      txns.forEach((txn, index) => {
-        const txnData = txn as unknown as AptosTransaction;
-        const version = Number(txnData.version);
-
-        processTxn(txnData);
-        if (index === limit - 1) offset = version + 1;
-      });
-    } catch (error) {
-      errorHandler(error);
-    } finally {
-      await sleep(1000);
-      toRepeat();
-    }
-  };
-
-  toRepeat();
+  // Recurse functions
+  setInterval(
+    async () => await memoizeTokenData(projectGroups.map(({ token }) => token)),
+    7 * 1e3
+  );
+  setInterval(
+    async () =>
+      await Promise.all([syncTrendingTokens(), syncTrendingMessageId()]),
+    60 * 1e3
+  );
 })();

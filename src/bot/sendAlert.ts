@@ -115,7 +115,7 @@ export async function sendAlert(data: BuyData) {
       const emojis = emoji.repeat(emojiCount);
       const trendingPosition =
         trendingRank !== -1
-          ? `[HypeTrending \\#${trendingRank}](${TRENDING_CHANNEL_LINK})`
+          ? `[HypeTrending \\#${trendingRank + 1}](${TRENDING_CHANNEL_LINK})`
           : "";
 
       const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*

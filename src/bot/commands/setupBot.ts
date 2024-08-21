@@ -1,6 +1,15 @@
+import { BOT_USERNAME } from "@/utils/env";
 import { CommandContext, Context, Keyboard } from "grammy";
 
 export async function setUpBot(ctx: CommandContext<Context>) {
+  const { type } = ctx.chat;
+
+  if (type !== "private") {
+    const text = `Only works in private chats, do /setup at @${BOT_USERNAME}`;
+    ctx.reply(text);
+    return false;
+  }
+
   const text = "❔ Select the group to add the buybot in.";
   const keyboard = new Keyboard()
     .requestChat(text, 7, {

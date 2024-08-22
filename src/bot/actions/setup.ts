@@ -5,6 +5,7 @@ import { apiFetcher } from "@/utils/api";
 import { projectGroups, syncProjectGroups } from "@/vars/projectGroups";
 import { botSetupState, settingsState, userState } from "@/vars/state";
 import { CallbackQueryContext, CommandContext, Context } from "grammy";
+import { TronWeb } from "tronweb";
 
 export async function inputTokenAddress(
   ctx: CommandContext<Context> | CallbackQueryContext<Context>
@@ -41,8 +42,8 @@ export async function setTokenAddress(ctx: CommandContext<Context>) {
   );
 
   const firstPair = dexSData?.data?.pairs?.at(0);
-  if (!firstPair || !tokenAddress) {
-    return ctx.reply("Please enter a valid Aptos token address");
+  if (!firstPair || !tokenAddress || !TronWeb.isAddress(tokenAddress)) {
+    return ctx.reply("Please enter a valid Tron token address");
   }
 
   delete userState[chatId];

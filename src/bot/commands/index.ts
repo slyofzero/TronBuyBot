@@ -5,6 +5,7 @@ import { settings } from "./settings";
 import { executeStep } from "../executeStep";
 import { setUpBot } from "./setupBot";
 import { CommandContext, Context } from "grammy";
+import { stop } from "./stop";
 
 export function initiateBotCommands() {
   teleBot.api
@@ -16,12 +17,14 @@ export function initiateBotCommands() {
         description:
           "Setup custom alerts by tweaking the settings (Group only command)",
       },
+      { command: "stop", description: "Stop the bot" },
     ])
     .catch(() => null);
 
   teleBot.command("start", (ctx) => startBot(ctx));
   teleBot.command("setup", (ctx) => setUpBot(ctx));
   teleBot.command("settings", (ctx) => settings(ctx));
+  teleBot.command("stop", (ctx) => stop(ctx));
 
   // @ts-expect-error Type not found
   teleBot.on([":text"], (ctx) => executeStep(ctx));

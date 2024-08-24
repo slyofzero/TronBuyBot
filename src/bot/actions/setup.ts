@@ -1,6 +1,7 @@
 import { addDocument, updateDocumentById } from "@/firebase";
 import { teleBot } from "@/index";
 import { PairsData, StoredGroup } from "@/types";
+import { SunPumpTokenData } from "@/types/sunpumpapidata";
 import { apiFetcher } from "@/utils/api";
 import { projectGroups, syncProjectGroups } from "@/vars/projectGroups";
 import { botSetupState, settingsState, userState } from "@/vars/state";
@@ -41,14 +42,23 @@ export async function setTokenAddress(ctx: CommandContext<Context>) {
     `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
   );
 
+  const sunpumpData = await apiFetcher<SunPumpTokenData>(
+    `https://api-v2.sunpump.meme/pump-api/token/${tokenAddress}`
+  );
+
   const firstPair = dexSData?.data?.pairs?.at(0);
-  if (!firstPair || !tokenAddress || !TronWeb.isAddress(tokenAddress)) {
+  const sunpumpToken = sunpumpData.data?.data;
+  if (
+    !(firstPair || sunpumpToken) ||
+    !tokenAddress ||
+    !TronWeb.isAddress(tokenAddress)
+  ) {
     return ctx.reply("Please enter a valid Tron token address");
   }
 
   delete userState[chatId];
 
-  const { symbol } = firstPair.baseToken;
+  const symbol = firstPair?.baseToken.symbol || sunpumpToken?.symbol;
 
   const projectGroupData = projectGroups.find(
     ({ chatId }) => chatId === projectGroup

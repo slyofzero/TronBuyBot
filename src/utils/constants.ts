@@ -1,4 +1,4 @@
-export const firebaseCollectionPrefix = "_tron_trending";
+export const firebaseCollectionPrefix = "_third_tron_trending";
 
 export const PRICE_API =
   "https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT";

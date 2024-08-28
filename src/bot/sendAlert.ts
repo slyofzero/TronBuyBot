@@ -10,6 +10,7 @@ import {
 import { trendingMessageId } from "@/vars/message";
 import { projectGroups } from "@/vars/projectGroups";
 import { teleBot } from "..";
+import { trendingIcons } from "@/utils/constants";
 
 export interface BuyData {
   txnHash: string;
@@ -113,7 +114,9 @@ export async function sendAlert(data: BuyData) {
       const emojis = emoji.repeat(emojiCount);
       const trendingPosition =
         trendingRank !== -1
-          ? `[Tron Trending \\#${trendingRank + 1}](${TRENDING_CHANNEL_LINK})`
+          ? `[${trendingIcons[trendingRank]} \\#${
+              trendingRank + 1
+            } on Tron Trending](${TRENDING_CHANNEL_LINK})`
           : "";
 
       const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*

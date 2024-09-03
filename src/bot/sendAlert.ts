@@ -11,6 +11,7 @@ import { trendingMessageId } from "@/vars/message";
 import { projectGroups } from "@/vars/projectGroups";
 import { teleBot } from "..";
 import { trendingIcons } from "@/utils/constants";
+import { getRandomNumber } from "@/utils/general";
 
 export interface BuyData {
   txnHash: string;
@@ -44,6 +45,12 @@ export async function sendAlert(data: BuyData) {
     const trendingRank = Object.entries(trendingTokens).findIndex(
       ([trendingToken]) => trendingToken === token
     );
+
+    const displayFdv = fdv
+      ? Number(
+          (Number(fdv) + sentUsdNumber * getRandomNumber(1.5, 3)).toFixed(2)
+        ).toLocaleString("en")
+      : 0;
 
     // log(`${buyer} bought ${toTokenAmount} ${toTokenSymbol}`);
 
@@ -87,7 +94,7 @@ ${emojis}
 🔀 Spent ${sentNative} TRX *\\($${sentUsd}\\)*
 🔀 Got ${formattedAmount} *${hardCleanUpBotMessage(toTokenSymbol)}*
 👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
-💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(fdv?.toLocaleString("en"))}
+💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(displayFdv)}
 
 [DexS](${dexSLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
 

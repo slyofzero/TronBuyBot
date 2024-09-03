@@ -1,41 +1,82 @@
-import { apiFetcher } from "./api";
-import { SwapDataResponse } from "@/types/txn";
-import { sendAlert } from "@/bot/sendAlert";
 import { sleep } from "./time";
-import { errorHandler } from "./handlers";
+import { getSwapLog, hexToTronAddress } from "./web3";
+import { tronWeb } from "..";
+import { ContractParamter, Transaction } from "tronweb/lib/esm/types";
 import { tokensToWatch } from "@/vars/projectGroups";
+import { BuyData, sendAlert } from "@/bot/sendAlert";
 
-const lastTxnHash: { [key: string]: string } = {};
+let lastBlock = 0;
+const allowedMethods = ["b6f9de95", "7ff36ab5", "fb3bdb41"];
 
-export async function getTokenBuys() {
-  for (const token of tokensToWatch) {
-    try {
-      const buys = await apiFetcher<SwapDataResponse>(
-        `https://api-v2.sunpump.meme/pump-api/transactions/token/${token}?page=1&size=10&sort=txDateTime:DESC`
-      );
+export async function getBlocks() {
+  const blockData = await tronWeb.trx.getConfirmedCurrentBlock();
+  const currentBlock = blockData.block_header.raw_data.number;
 
-      for (const swap of (buys.data?.data.swaps || []).slice().reverse()) {
-        const { txHash, toTokenAddress } = swap;
+  if (currentBlock > lastBlock) {
+    lastBlock = currentBlock;
+    const transactions = blockData.transactions;
 
-        if (txHash === lastTxnHash[toTokenAddress]) break;
-
-        lastTxnHash[toTokenAddress] = txHash;
-        if (swap.txnOrderType === "SELL") continue;
-
-        sendAlert({
-          fromTokenAmount: swap.fromTokenAmount,
-          fromTokenSymbol: swap.fromTokenSymbol,
-          toTokenAmount: swap.toTokenAmount,
-          toTokenSymbol: swap.toTokenSymbol,
-          txnHash: txHash,
-          buyer: swap.userAddress,
-          token: swap.toTokenAddress,
-        });
+    if (transactions) {
+      for (const txn of transactions) {
+        parseTxn(txn);
       }
-    } catch (error) {
-      errorHandler(error);
     }
   }
 
-  sleep(5 * 1e3).then(() => getTokenBuys());
+  await sleep(2000);
+  getBlocks();
+}
+
+async function parseTxn(txn: Transaction<ContractParamter>) {
+  const rawData = txn.raw_data.contract
+    .map(({ parameter }) => {
+      // @ts-expect-error weird
+      const methodData = parameter.value.data as string | undefined;
+      const methodHex = methodData?.slice(0, 8) || "";
+
+      if (methodData && allowedMethods.includes(methodHex)) {
+        const params = methodData.slice(8, methodData.length);
+
+        let start = 0;
+        let end = 64;
+
+        const methodParams = [];
+
+        while (end <= params.length) {
+          const param = params.slice(start, end);
+          methodParams.push(param);
+          start += 64;
+          end += 64;
+        }
+
+        const token = methodParams.at(-1);
+
+        if (token)
+          return {
+            txn: txn.txID,
+            token: hexToTronAddress(token),
+            buyer: hexToTronAddress(parameter.value.owner_address),
+          };
+      }
+    })
+    .filter((val) => val);
+
+  if (rawData.length) {
+    for (const rawDataInfo of rawData) {
+      const token = rawDataInfo?.token || "";
+
+      if (tokensToWatch.includes(token)) {
+        const swapData = await getSwapLog(txn.txID);
+
+        if (swapData) {
+          const txnData = {
+            ...rawDataInfo,
+            ...swapData,
+            txnHash: txn.txID,
+          } as BuyData;
+          sendAlert(txnData);
+        }
+      }
+    }
+  }
 }

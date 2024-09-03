@@ -12,6 +12,9 @@ export const minBuy = 1;
 export const urlRegex =
   /^(?:https?|ftp):\/\/(?:www\.)?[\w-]+\.[a-z]{2,}(?:\/[\w-]*)*\/?(?:\?[^#\s]*)?$/;
 
+export const swapEvent =
+  "d78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
+
 export const trendingIcons = [
   "🥇",
   "🥈",

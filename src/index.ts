@@ -11,7 +11,12 @@ import { memoizeTokenData } from "./vars/tokens";
 import { syncAdvertisements } from "./vars/advertisements";
 import { syncTrendingTokens } from "./vars/trending";
 import { syncTrendingMessageId } from "./vars/message";
-import { getTokenBuys } from "./utils/buy";
+import { TronWeb } from "tronweb";
+import { getBlocks } from "./utils/buy";
+
+export const tronWeb = new TronWeb({
+  fullHost: "https://api.trongrid.io",
+});
 
 export const teleBot = new Bot(BOT_TOKEN || "");
 log("Bot instance ready");
@@ -31,7 +36,7 @@ log("Bot instance ready");
 
   await memoizeTokenData(tokensToWatch);
 
-  getTokenBuys();
+  getBlocks();
 
   // Recurse functions
   setInterval(

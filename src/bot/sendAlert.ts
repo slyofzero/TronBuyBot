@@ -14,32 +14,17 @@ import { trendingIcons } from "@/utils/constants";
 
 export interface BuyData {
   txnHash: string;
-  fromTokenSymbol: string;
-  fromTokenAmount: number;
-  toTokenSymbol: string;
-  toTokenAmount: number;
-  buyer: string;
+  amount0In: number;
+  amount1Out: number;
+  pool: string;
+  txn: string;
   token: string;
+  buyer: string;
 }
-
-// export interface BuyData {
-//   txn: string;
-//   contract: string;
-//   buyer: string;
-//   amountBought: number;
-// }
 
 export async function sendAlert(data: BuyData) {
   try {
-    const {
-      buyer,
-      token,
-      fromTokenAmount,
-      fromTokenSymbol,
-      toTokenAmount,
-      toTokenSymbol,
-      txnHash,
-    } = data;
+    const { buyer, token, txnHash, amount0In, amount1Out } = data;
 
     const groups = projectGroups.filter(
       ({ token: groupToken }) => groupToken === token
@@ -49,13 +34,12 @@ export async function sendAlert(data: BuyData) {
 
     // Preparing message for token
     const tokenData = memoTokenData[token];
-    const { priceUsd, fdv, info } = tokenData;
-    const sentUsdNumber = toTokenAmount * Number(priceUsd);
-    const sentNative = cleanUpBotMessage(fromTokenAmount.toLocaleString("en")); // prettier-ignore
+    const { priceUsd, fdv, info, baseToken } = tokenData;
+    const toTokenSymbol = baseToken?.symbol;
+    const sentUsdNumber = amount1Out * Number(priceUsd);
+    const sentNative = cleanUpBotMessage(amount0In.toLocaleString("en")); // prettier-ignore
     const sentUsd = cleanUpBotMessage(sentUsdNumber.toFixed(2));
-    const formattedAmount = cleanUpBotMessage(
-      toTokenAmount.toLocaleString("en")
-    );
+    const formattedAmount = cleanUpBotMessage(amount1Out.toLocaleString("en"));
     // const position = change ? `+${change}%` : "New!!!";
     const trendingRank = Object.entries(trendingTokens).findIndex(
       ([trendingToken]) => trendingToken === token
@@ -79,16 +63,6 @@ export async function sendAlert(data: BuyData) {
     const buyerLink = `https://tronscan.org/#/address/${buyer}`;
     const txnLink = `https://tronscan.org/#/transaction/${txnHash}`;
     const dexSLink = `https://dexscreener.com/tron/${token}`;
-    // const photonLink = `https://photon-sol.tinyastro.io/en/lp/${token}`;
-    // const advertisement = advertisements.at(0);
-    // let advertisementText = "";
-
-    // if (advertisement) {
-    //   const { text, link } = advertisement;
-    //   advertisementText = `*_Ad: [${text}](${link})_*`;
-    // } else {
-    //   advertisementText = `*_Ad: [Place your advertisement here](https://t.me/${TRENDING_BOT_USERNAME}?start=adBuyRequest)_*`;
-    // }
 
     const telegramLink = info?.socials?.find(
       ({ type }) => type.toLowerCase() === "telegram"
@@ -97,18 +71,6 @@ export async function sendAlert(data: BuyData) {
     const specialLink = telegramLink
       ? `[Telegram](${telegramLink})`
       : `[Screener](${dexSLink})`;
-
-    //     const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*
-    // ${emojis}
-
-    // 🔀 ${sentNative} ${fromTokenSymbol} *\\($${sentUsd}\\)*
-    // 🔀 ${formattedAmount} *${hardCleanUpBotMessage(toTokenSymbol)}*
-    // 👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
-    // 💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(fdv.toLocaleString("en"))}
-
-    // [DexS](${dexSLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
-
-    // ${advertisementText}`;
 
     const addEmojiToMessage = (emoji: string) => {
       const emojis = emoji.repeat(emojiCount);
@@ -122,7 +84,7 @@ export async function sendAlert(data: BuyData) {
       const message = `*[${toTokenSymbol}](${telegramLink || dexSLink}) Buy\\!*
 ${emojis}
 
-🔀 Spent ${sentNative} ${fromTokenSymbol} *\\($${sentUsd}\\)*
+🔀 Spent ${sentNative} TRX *\\($${sentUsd}\\)*
 🔀 Got ${formattedAmount} *${hardCleanUpBotMessage(toTokenSymbol)}*
 👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
 💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(fdv?.toLocaleString("en"))}

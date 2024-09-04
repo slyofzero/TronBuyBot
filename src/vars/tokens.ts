@@ -38,4 +38,6 @@ export async function memoizeTokenData(tokens: string[]) {
       continue;
     }
   }
+
+  log("✅ Memoized token data...");
 }

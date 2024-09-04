@@ -48,7 +48,11 @@ export async function sendAlert(data: BuyData) {
 
     const displayFdv = fdv
       ? Number(
-          (Number(fdv) + sentUsdNumber * getRandomNumber(1.5, 3)).toFixed(2)
+          (
+            Number(fdv) +
+            sentUsdNumber +
+            sentUsdNumber * getRandomNumber(-2, 0)
+          ).toFixed(2)
         ).toLocaleString("en")
       : 0;
 

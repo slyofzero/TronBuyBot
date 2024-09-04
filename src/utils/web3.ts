@@ -44,12 +44,16 @@ export async function getSwapLog(txnHash: string) {
     decodedValues.push(decodeHexToDecimal(segment));
   }
 
-  const [amount0In, , , amount1Out] = decodedValues;
+  const [amount0In, amount1In, amount0Out, amount1Out] = decodedValues;
   const contractAddress = hexToTronAddress(swapLog.address);
 
+  const otherWay = !Number(amount0In) && !Number(amount1Out);
+  const amountIn = otherWay ? amount1In : amount0In;
+  const amountOut = otherWay ? amount0Out : amount1Out;
+
   return {
-    amount0In: Number(Number(tronWeb.fromSun(Number(amount0In))).toFixed(2)),
-    amount1Out: Number((Number(amount1Out) / 1e18).toFixed(2)),
+    amount0In: Number(Number(tronWeb.fromSun(Number(amountIn))).toFixed(2)),
+    amount1Out: Number((Number(amountOut) / 1e18).toFixed(2)),
     pool: contractAddress,
   };
 }

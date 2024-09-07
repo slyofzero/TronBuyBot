@@ -35,7 +35,7 @@ export async function sendAlert(data: BuyData) {
 
     // Preparing message for token
     const tokenData = memoTokenData[token];
-    const { priceUsd, fdv, info, baseToken } = tokenData;
+    const { priceUsd, fdv, info, baseToken, holders } = tokenData;
     const toTokenSymbol = baseToken?.symbol;
     const sentUsdNumber = amount1Out * Number(priceUsd);
     const sentNative = cleanUpBotMessage(amount0In.toLocaleString("en")); // prettier-ignore
@@ -97,8 +97,9 @@ ${emojis}
 
 🔀 Spent ${sentNative} TRX *\\($${sentUsd}\\)*
 🔀 Got ${formattedAmount} *${hardCleanUpBotMessage(toTokenSymbol)}*
-👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
+👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink})
 💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(displayFdv)}
+🧑🏻 Holders - ${holders}
 
 [DexS](${dexSLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
 

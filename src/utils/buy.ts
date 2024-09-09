@@ -9,7 +9,7 @@ let lastBlock = 0;
 const allowedMethods = ["b6f9de95", "7ff36ab5", "fb3bdb41"];
 
 export async function getBlocks() {
-  const blockData = await tronWeb.trx.getConfirmedCurrentBlock();
+  const blockData = await tronWeb.trx.getCurrentBlock();
   const currentBlock = blockData.block_header.raw_data.number;
 
   if (currentBlock > lastBlock) {

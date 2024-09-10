@@ -102,8 +102,7 @@ ${emojis}
 💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(displayFdv)}
 🧑🏻 Holders \\- ${holders}
 
-[DexS](${dexSLink}) \\| [DexTools](${dexTLink})
-${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
+[DexS](${dexSLink}) \\| [DexTools](${dexTLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
 
 ${trendingPosition}`;
 

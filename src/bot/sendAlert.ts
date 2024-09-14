@@ -12,6 +12,7 @@ import { projectGroups } from "@/vars/projectGroups";
 import { teleBot } from "..";
 import { trendingIcons } from "@/utils/constants";
 import { getRandomNumber } from "@/utils/general";
+import { StoredGroup } from "@/types";
 
 export interface BuyData {
   txnHash: string;
@@ -35,7 +36,7 @@ export async function sendAlert(data: BuyData) {
 
     // Preparing message for token
     const tokenData = memoTokenData[token];
-    const { priceUsd, fdv, info, baseToken } = tokenData;
+    const { priceUsd, fdv, baseToken } = tokenData;
     const toTokenSymbol = baseToken?.symbol;
     const sentUsdNumber = amount1Out * Number(priceUsd);
     const sentNative = cleanUpBotMessage(amount0In.toLocaleString("en")); // prettier-ignore
@@ -75,16 +76,21 @@ export async function sendAlert(data: BuyData) {
     const txnLink = `https://tronscan.org/#/transaction/${txnHash}`;
     const dexSLink = `https://dexscreener.com/tron/${token}`;
 
-    const telegramLink = info?.socials?.find(
-      ({ type }) => type.toLowerCase() === "telegram"
-    )?.url;
+    const updateMessageForGroup = (group: StoredGroup) => {
+      const { emoji, websiteLink, telegramLink, twitterLink } = group;
+      const emojis = emoji?.repeat(emojiCount);
 
-    const specialLink = telegramLink
-      ? `[Telegram](${telegramLink})`
-      : `[Screener](${dexSLink})`;
+      const links = {
+        Website: websiteLink,
+        Telegram: telegramLink,
+        Twitter: twitterLink,
+      };
 
-    const addEmojiToMessage = (emoji: string) => {
-      const emojis = emoji.repeat(emojiCount);
+      const specialLinks = Object.entries(links)
+        .filter(([, link]) => link)
+        .map(([label, link]) => `[${label}](${link})`)
+        .join(" \\| ");
+
       const trendingPosition =
         trendingRank !== -1
           ? `[${trendingIcons[trendingRank]} \\#${
@@ -100,7 +106,7 @@ ${emojis}
 👤 [Buyer](${buyerLink}) \\| [Txn](${txnLink}  )
 💸 [Market Cap](${dexSLink}) $${cleanUpBotMessage(displayFdv)}
 
-[DexS](${dexSLink}) \\| ${specialLink} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
+[DexS](${dexSLink}) \\| ${specialLinks} \\| [Trending](${TRENDING_CHANNEL_LINK}/${trendingMessageId})
 
 ${trendingPosition}`;
 
@@ -109,9 +115,9 @@ ${trendingPosition}`;
 
     // Sending Message
     for (const group of groups) {
-      const { emoji, mediaType, minBuy } = group;
-      if (sentUsd > Number(minBuy)) continue;
-      const message = addEmojiToMessage(emoji || "🟢");
+      const { mediaType, minBuy } = group;
+      if (sentUsd < Number(minBuy)) continue;
+      const message = updateMessageForGroup(group);
 
       try {
         if (group.media) {

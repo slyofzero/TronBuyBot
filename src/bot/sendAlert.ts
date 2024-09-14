@@ -134,7 +134,7 @@ ${trendingPosition}`;
     // Sending Message
     for (const group of groups) {
       const { emoji, mediaType, minBuy } = group;
-      if (sentUsd > Number(minBuy)) continue;
+      if (sentUsd < Number(minBuy)) continue;
       const message = addEmojiToMessage(emoji || "🟢");
 
       try {
